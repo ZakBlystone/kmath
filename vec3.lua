@@ -185,6 +185,7 @@ local function is_normalized(a,t)
 end
 
 local function normalized(a,c)
+    c = c or a
     local l = len(a)
     c[1] = a[1] / l
     c[2] = a[2] / l
@@ -477,6 +478,90 @@ local function from_gmod(a,vec)
 
 end
 
+-- networking
+local coord_intbits = 14
+local coord_divbits = 5
+local coord_denom = bit.lshift(1, coord_divbits)
+local coord_res = 1/coord_denom
+local norm_bits = 11
+local norm_denom = bit.lshift(1, norm_bits) - 1
+local norm_res = 1/norm_denom
+
+local __floor = math.floor
+local __band = bit.band
+
+local function net_write_pos_component(x)
+
+    local int = __floor(__abs(x))
+    local div = __band(__floor(__abs(x * coord_denom)), coord_denom - 1)
+    local cmp = (int ~= 0 and 1 or 0) + (div ~= 0 and 2 or 0)
+
+    net.WriteUInt(cmp, 2)
+    if int ~= 0 then net.WriteUInt(int-1, coord_intbits) end
+    if div ~= 0 then net.WriteUInt(div, coord_divbits) end
+    net.WriteBool(x <= -coord_res)
+
+end
+
+local function net_read_pos_component()
+
+    local cmp, x = net.ReadUInt(2), 0
+    if cmp % 2 ~= 0 then x = x + net.ReadUInt(coord_intbits) + 1 end
+    if cmp > 1 then x = x + net.ReadUInt(coord_divbits) * coord_res end
+    return net.ReadBool() and -x or x
+
+end
+
+local function net_write_norm_component(x)
+
+    net.WriteUInt(__min(__floor(__abs(x * norm_denom)), norm_denom), norm_bits)
+    net.WriteBool(x <= -norm_res)
+
+end
+
+local function net_read_norm_component()
+
+    return (net.ReadUInt(norm_bits) * norm_res) * (net.ReadBool() and -1 or 1)
+
+end
+
+local function net_write_pos(a)
+
+    for i=1, 3 do
+        local p = a[i] >= coord_res or a[i] <= -coord_res
+        net.WriteBool(p) if p then net_write_pos_component(a[i]) end
+    end
+
+end
+
+local function net_read_pos(a)
+
+    a = a or new()
+    for i=1, 3 do a[i] = net.ReadBool() and net_read_pos_component() or 0 end
+    return a
+
+end
+
+local function net_write_normal(a)
+
+    for i=1, 2 do
+        local p = a[i] >= norm_res or a[i] <= -norm_res
+        net.WriteBool(p) if p then net_write_norm_component(a[i]) end
+    end
+    net.WriteBool(a[3] <= -norm_res)
+
+end
+
+local function net_read_normal(a)
+
+    a = a or new()
+    for i=1, 2 do a[i] = net.ReadBool() and net_read_norm_component() or 0 end
+    local z = a[1]^2 + a[2]^2
+    a[3] = (z < 1 and math.sqrt(1-z) or 0) * (net.ReadBool() and -1 or 1)
+    return a
+
+end
+
 return {
     zero = new(0,0,0),
     one = new(1,1,1),
@@ -526,4 +611,8 @@ return {
     from_barycentric3 = from_barycentric3,
     to_gmod = to_gmod,
     from_gmod = from_gmod,
+    net_read_pos = net_read_pos,
+    net_write_pos = net_write_pos,
+    net_read_normal = net_read_normal,
+    net_write_normal = net_write_normal,
 }
