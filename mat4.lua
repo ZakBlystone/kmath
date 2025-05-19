@@ -322,6 +322,36 @@ local function rotation_quat(m, q)
 
 end
 
+local __sin, __cos, __rad = math.sin, math.cos, math.pi / 180
+local function rotation_euler(m, e)
+
+    local pitch = e[1] * __rad
+    local yaw   = e[2] * __rad
+    local roll  = e[3] * __rad
+
+    local sx, cx = __sin(roll),  __cos(roll)
+    local sy, cy = __sin(pitch), __cos(pitch)
+    local sz, cz = __sin(yaw),   __cos(yaw)
+
+    local r0x = (cy*cz)
+    local r0y = (cy*sz)
+    local r0z = (-sy)
+    local r1x = (sx*sy*cz+cx*-sz)
+    local r1y = (sx*sy*sz+cx*cz)
+    local r1z = (sx*cy)
+    local r2x = (cx*sy*cz-sx*-sz)
+    local r2y = (cx*sy*sz-sx*cz)
+    local r2z = (cx*cy)
+
+    m[ 1], m[ 2], m[ 3], m[ 4] = r0x, r1x, r2x, 0
+    m[ 5], m[ 6], m[ 7], m[ 8] = r0y, r1y, r2y, 0
+    m[ 9], m[10], m[11], m[12] = r0z, r1z, r2z, 0
+    m[13], m[14], m[15], m[16] =   0,   0,   0, 1
+
+    return m
+
+end
+
 local tq = {}
 local function rotation_axis(m, axis, angle)
 
@@ -733,6 +763,7 @@ return {
     rotation_y = rotation_y,
     rotation_z = rotation_z,
     rotation_quat = rotation_quat,
+    rotation_euler = rotation_euler,
     rotation_axis = rotation_axis,
     rotation_translation = rotation_translation,
     inv_rotation_translation = inv_rotation_translation,
