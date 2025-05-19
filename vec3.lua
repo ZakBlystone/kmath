@@ -280,50 +280,22 @@ end
 
 local function intersect_aabb(org, dir, min, max, out_normal)
 
-    local x0,y0,z0 = unp(min)
-    local x1,y1,z1 = unp(max)
-    local ox,oy,oz = unp(org)
-    local dx,dy,dz = unp(dir)
-
-    dx = 1/dx
-    dy = 1/dy
-    dz = 1/dz
-
-    local t0 = (x0 - ox) * dx
-    local t1 = (x1 - ox) * dx
-    local t2 = (y0 - oy) * dy
-    local t3 = (y1 - oy) * dy
-    local t4 = (z0 - oz) * dz
-    local t5 = (z1 - oz) * dz
-
-    local tmin = 
-    math.max(
-        math.max(
-            math.min(t0,t1),
-            math.min(t2,t3)
-        ),
-        math.min(t4,t5)
-    )
-
-    local tmax = 
-    math.min(
-        math.min(
-            math.max(t0,t1),
-            math.max(t2,t3)
-        ),
-        math.max(t4,t5)
-    )
+    local dx,dy,dz = 1/dir[1], 1/dir[2], 1/dir[3]
+    local x0,y0,z0 = (min[1]-org[1])*dx, (min[2]-org[2])*dy, (min[3]-org[3])*dz
+    local x1,y1,z1 = (max[1]-org[1])*dx, (max[2]-org[2])*dy, (max[3]-org[3])*dz
+    local tmin = __max(__max(__min(x0,x1),__min(y0,y1)),__min(z0,z1))
+    local tmax = __min(__min(__max(x0,x1),__max(y0,y1)),__max(z0,z1))
 
     if tmax < 0 then return false end
     if tmin > tmax then return false end
 
     if out_normal then
-        if tmin == t0 then set(out_normal, -1, 0, 0) end
-        if tmin == t1 then set(out_normal, 1, 0, 0) end
-        if tmin == t2 then set(out_normal, 0, -1, 0) end
-        if tmin == t3 then set(out_normal, 0, 1, 0) end
-        if tmin == t4 then set(out_normal, 0, 0, -1) end
-        if tmin == t5 then set(out_normal, 0, 0, 1) end
+        if tmin == x0 then set(out_normal, -1, 0, 0) end
+        if tmin == x1 then set(out_normal, 1, 0, 0) end
+        if tmin == y0 then set(out_normal, 0, -1, 0) end
+        if tmin == y1 then set(out_normal, 0, 1, 0) end
+        if tmin == z0 then set(out_normal, 0, 0, -1) end
+        if tmin == z1 then set(out_normal, 0, 0, 1) end
     end
 
     return true, tmin, tmax
