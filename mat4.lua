@@ -705,6 +705,27 @@ local function to_quat(m, q)
 
 end
 
+local v_fwd, v_left, v_up = {}, {}, {}
+local __deg, __atan2 = math.deg, math.atan2
+local function to_euler(m, e)
+
+    get_column3(m, 0, v_fwd)
+    get_column3(m, 1, v_left)
+    get_column3(m, 2, v_up)
+
+    local xy = math.sqrt( v_fwd[1] * v_fwd[1] + v_fwd[2] * v_fwd[2] )
+    if xy > 0.001 then
+        e[2] = __deg( __atan2( v_fwd[2], v_fwd[1] ) )
+        e[1] = __deg( __atan2( -v_fwd[3], xy ) )
+        e[3] = __deg( __atan2( v_left[3], v_up[3] ) )
+    else
+        e[2] = __deg( __atan2( -v_left[1], v_left[2] ) )
+        e[1] = __deg( __atan2( -v_fwd[3], xy ) )
+        e[3] = 0
+    end
+
+end
+
 local function to_gmod(m, mtx)
 
     mtx = mtx or Matrix()
@@ -783,6 +804,7 @@ return {
     post_translated = post_translated,
     rotated_aabb = rotated_aabb,
     to_quat = to_quat,
+    to_euler = to_euler,
     to_gmod = to_gmod,
     from_gmod = from_gmod,
 }
